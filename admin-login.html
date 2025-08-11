@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arsaofisim - Admin Girişi</title>
+    
+<!-- ... form ... -->
+        <form id="loginForm">
+          <input id="email" type="email" required />
+          <input id="password" type="password" required />
+          <button id="loginBtn">Giriş Yap</button>
+        </form>
+        <div id="loading" style="display:none">Yükleniyor...</div>
+        <div id="error" style="display:none"></div>
+        <div id="success" style="display:none"></div>
+        <a href="#" id="forgotLink">Şifremi Unuttum</a>
+
+        <script type="module">
+          import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+          import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail } 
+            from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+          let auth;
+
+          async function initFirebase() {
+            const res = await fetch('/.netlify/functions/firebase-config');
+            const firebaseConfig = await res.json();
+
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+
+            onAuthStateChanged(auth, (user) => {
+              if (user) location.href = 'admin-panel.html';
+            });
+
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            document.getElementById('forgotLink').addEventListener('click', (e) => {
+              e.preventDefault(); resetPassword();
+            });
+          }
+
+          async function handleLogin(e){
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('loginBtn');
+            const loading = document.getElementById('loading');
+            btn.disabled = true; loading.style.display = 'block'; hideMessages();
+            try{
+              await signInWithEmailAndPassword(auth, email, password);
+              showSuccess('Giriş başarılı!'); setTimeout(()=>location.href='admin-panel.html', 800);
+            }catch(err){ showError(mapAuthErr(err)); }
+            finally{ btn.disabled = false; loading.style.display='none'; }
+          }
+
+          async function resetPassword(){
+            const email = document.getElementById('email').value.trim();
+            if(!email) return showError('Şifre sıfırlamak için e-posta girin.');
+            try{ await sendPasswordResetEmail(auth, email); showSuccess('Sıfırlama e-postası gönderildi.'); }
+            catch(err){ showError(mapAuthErr(err)); }
+          }
+
+          function mapAuthErr(error){
+            switch(error.code){
+              case 'auth/user-not-found': return 'Bu e-posta ile kullanıcı bulunamadı.';
+              case 'auth/wrong-password': return 'Hatalı şifre.';
+              case 'auth/invalid-email': return 'Geçersiz e-posta.';
+              case 'auth/user-disabled': return 'Hesap devre dışı.';
+              case 'auth/too-many-requests': return 'Çok fazla deneme; sonra tekrar deneyin.';
+              case 'auth/network-request-failed': return 'Ağ hatası.';
+              case 'auth/invalid-credential': return 'E-posta veya şifre hatalı.';
+              default: return `Hata: ${error.message}`;
+            }
+          }
+          function showError(m){ const el = document.getElementById('error'); el.textContent=m; el.style.display='block'; }
+          function showSuccess(m){ const el = document.getElementById('success'); el.textContent=m; el.style.display='block'; }
+          function hideMessages(){ document.getElementById('error').style.display='none'; document.getElementById('success').style.display='none'; }
+
+          document.addEventListener('DOMContentLoaded', initFirebase);
+</script>
+
+    </script>
+
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        .login-container h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #ffd700;
+        }
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: #ffd700;
+            border: none;
+            border-radius: 8px;
+            color: #2c3e50;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .login-btn:hover {
+            background: #ffed4e;
+            transform: translateY(-2px);
+        }
+        .login-btn:disabled {
+            background: #e1e8ed;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .error-message {
+            color: #e74c3c;
+            text-align: center;
+            margin-bottom: 20px;
+            display: none;
+            padding: 10px;
+            background: rgba(231, 76, 60, 0.1);
+            border-radius: 5px;
+            border: 1px solid rgba(231, 76, 60, 0.3);
+        }
+        .success-message {
+            color: #27ae60;
+            text-align: center;
+            margin-bottom: 20px;
+            display: none;
+            padding: 10px;
+            background: rgba(39, 174, 96, 0.1);
+            border-radius: 5px;
+            border: 1px solid rgba(39, 174, 96, 0.3);
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            color: #666;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #ffd700;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .forgot-password {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .forgot-password a {
+            color: #3498db;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .forgot-password a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>Admin Girişi</h1>
+        <div id="error" class="error-message"></div>
+        <div id="success" class="success-message"></div>
+        <div id="loading" class="loading">
+            <span class="loading-spinner"></span>
+            Giriş yapılıyor...
+        </div>
+        
+        <form id="loginForm" onsubmit="return handleLogin(event)">
+            <div class="form-group">
+                <label for="email">E-posta</label>
+                <input type="email" id="email" name="email" required 
+                       placeholder="admin@arsaofisim.com">
+            </div>
+            <div class="form-group">
+                <label for="password">Şifre</label>
+                <input type="password" id="password" name="password" required
+                       placeholder="Şifrenizi girin">
+            </div>
+            <button type="submit" class="login-btn" id="loginBtn">Giriş Yap</button>
+        </form>
+        
+        <div class="forgot-password">
+            <a href="#" onclick="resetPassword()">Şifremi Unuttum</a>
+        </div>
+    </div>
+
+    <script>
+        // Form submit işlemi
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            if (!window.auth || !window.firebaseAuth) {
+                showError('Firebase bağlantısı kurulamadı. Lütfen sayfayı yenileyin.');
+                return false;
+            }
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const loading = document.getElementById('loading');
+            
+            // UI güncelle
+            loginBtn.disabled = true;
+            loading.style.display = 'block';
+            hideMessages();
+            
+            try {
+                await window.firebaseAuth.signInWithEmailAndPassword(window.auth, email, password);
+                showSuccess('Giriş başarılı! Yönlendiriliyorsunuz...');
+                
+                setTimeout(() => {
+                    window.location.href = 'admin-panel.html';
+                }, 1500);
+                
+            } catch (error) {
+                console.error('Giriş hatası:', error);
+                
+                let errorMessage = 'Giriş yapılırken bir hata oluştu.';
+                
+                switch (error.code) {
+                    case 'auth/user-not-found':
+                        errorMessage = 'Bu e-posta adresi ile kayıtlı kullanıcı bulunamadı.';
+                        break;
+                    case 'auth/wrong-password':
+                        errorMessage = 'Hatalı şifre girdiniz.';
+                        break;
+                    case 'auth/invalid-email':
+                        errorMessage = 'Geçersiz e-posta adresi.';
+                        break;
+                    case 'auth/user-disabled':
+                        errorMessage = 'Bu kullanıcı hesabı devre dışı bırakılmış.';
+                        break;
+                    case 'auth/too-many-requests':
+                        errorMessage = 'Çok fazla başarısız deneme. Lütfen daha sonra tekrar deneyin.';
+                        break;
+                    case 'auth/network-request-failed':
+                        errorMessage = 'Ağ bağlantısı hatası. İnternet bağlantınızı kontrol edin.';
+                        break;
+                    case 'auth/invalid-credential':
+                        errorMessage = 'E-posta veya şifre hatalı.';
+                        break;
+                    default:
+                        errorMessage = `Hata: ${error.message}`;
+                }
+                
+                showError(errorMessage);
+            } finally {
+                loginBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+            
+            return false;
+        }
+
+
+        document.getElementById('loginForm')
+            .addEventListener('submit', handleLogin);
+
+        // Şifre sıfırlama
+        async function resetPassword() {
+            const email = document.getElementById('email').value;
+            
+            if (!email) {
+                showError('Şifre sıfırlama için önce e-posta adresinizi girin.');
+                return;
+            }
+            
+            if (!window.auth) {
+                showError('Firebase bağlantısı kurulamadı.');
+                return;
+            }
+
+            try {
+                // Import sendPasswordResetEmail function
+                const { sendPasswordResetEmail } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+                
+                await sendPasswordResetEmail(window.auth, email);
+                showSuccess('Şifre sıfırlama e-postası gönderildi. E-posta kutunuzu kontrol edin.');
+                
+            } catch (error) {
+                console.error('Şifre sıfırlama hatası:', error);
+                
+                let errorMessage = 'Şifre sıfırlama e-postası gönderilemedi.';
+                
+                if (error.code === 'auth/user-not-found') {
+                    errorMessage = 'Bu e-posta adresi ile kayıtlı kullanıcı bulunamadı.';
+                }
+                
+                showError(errorMessage);
+            }
+        }
+
+        // Mesaj gösterme fonksiyonları
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('success');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+        }
+
+        function hideMessages() {
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('success').style.display = 'none';
+        }
+
+        // Enter tuşu ile form submit
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+            }
+        });
+
+        // Firebase yüklenme kontrolü
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                if (!window.auth || !window.firebaseAuth) {
+                    showError('Firebase modülleri yüklenemedi. Lütfen sayfayı yenileyin.');
+                }
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
